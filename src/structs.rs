@@ -1,6 +1,7 @@
 pub(crate) type Result<T> = core::result::Result<T, OtaError>;
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum OtaError {
     NotEnoughPartitions,
     OtaNotStarted,
@@ -33,6 +34,7 @@ pub struct PartitionInfo {
 
 #[repr(u32)]
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum OtaImgState {
     EspOtaImgNew = 0x0,
     EspOtaImgPendingVerify = 0x1,

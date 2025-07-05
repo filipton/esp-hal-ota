@@ -27,8 +27,7 @@ pub fn esp_get_current_running_partition(partitions: &[(u32, u32)]) -> Option<us
     let entry_id = crate::mmu_ll::mmu_ll_get_entry_id(mmu_id, ptr as u32);
 
     if !crate::mmu_ll::mmu_ll_check_entry_valid(mmu_id, entry_id) {
-        #[cfg(feature = "log")]
-        log::error!("mmu_ll_check_entry_valid failed!");
+        error!("mmu_ll_check_entry_valid failed!");
 
         return None;
     }

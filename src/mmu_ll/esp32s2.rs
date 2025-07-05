@@ -39,8 +39,7 @@ pub fn mmu_ll_get_entry_id(_mmu_id: u32, vaddr: u32) -> u32 {
     } else if soc_address_in_bus!(SOC_DRAM0_CACHE, vaddr) {
         PRO_CACHE_DBUS0_MMU_START / 4
     } else {
-        #[cfg(feature = "log")]
-        log::error!("mmu_ll_get_entry_id failed!");
+        error!("mmu_ll_get_entry_id failed!");
 
         0
     };

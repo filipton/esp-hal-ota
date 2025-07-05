@@ -43,8 +43,7 @@ pub fn mmu_ll_get_entry_id(_mmu_id: u32, vaddr: u32) -> u32 {
         shift_code = 15;
         vaddr_mask = SOC_MMU_VADDR_MASK >> 1;
     } else {
-        #[cfg(feature = "log")]
-        log::error!("mmu_ll_get_entry_id failed!");
+        error!("mmu_ll_get_entry_id failed!");
     }
 
     offset + ((vaddr & vaddr_mask) >> shift_code)

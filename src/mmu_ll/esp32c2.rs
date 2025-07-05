@@ -24,8 +24,7 @@ pub fn mmu_ll_get_entry_id(mmu_id: u32, vaddr: u32) -> u32 {
         MMU_PAGE_32KB => 15,
         MMU_PAGE_16KB => 14,
         _ => {
-            #[cfg(feature = "log")]
-            log::error!("mmu_ll_get_entry_id failed!");
+            error!("mmu_ll_get_entry_id failed!");
 
             0
         }
@@ -40,8 +39,7 @@ pub fn mmu_ll_entry_id_to_paddr_base(mmu_id: u32, entry_id: u32) -> u32 {
         MMU_PAGE_32KB => 15,
         MMU_PAGE_16KB => 14,
         _ => {
-            #[cfg(feature = "log")]
-            log::error!("mmu_ll_entry_id_to_paddr_base failed!");
+            error!("mmu_ll_entry_id_to_paddr_base failed!");
 
             0
         }

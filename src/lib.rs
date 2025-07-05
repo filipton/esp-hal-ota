@@ -3,6 +3,9 @@
 #![cfg_attr(feature = "esp32", feature(asm_experimental_arch))]
 #![doc = include_str!("../README.md")]
 
+#[macro_use]
+mod logging;
+
 use embedded_storage::{ReadStorage, Storage};
 pub use structs::*;
 
@@ -34,8 +37,7 @@ where
     pub fn new(mut flash: S) -> Result<Self> {
         let pinfo = Self::read_partitions(&mut flash)?;
         if pinfo.ota_partitions_count < 2 {
-            #[cfg(feature = "log")]
-            log::error!("Not enough OTA partitions! (>= 2)");
+            error!("Not enough OTA partitions! (>= 2)");
 
             return Err(OtaError::NotEnoughPartitions);
         }
@@ -71,8 +73,7 @@ where
     /// Returns ota progress in f32 (0..1)
     pub fn get_ota_progress(&self) -> f32 {
         if self.progress.is_none() {
-            #[cfg(feature = "log")]
-            log::warn!("[OTA] Cannot get ota progress! Seems like update wasn't started yet.");
+            warn!("[OTA] Cannot get ota progress! Seems like update wasn't started yet.");
 
             return 0.0;
         }
@@ -99,11 +100,9 @@ where
             .write(progress.flash_offset, &chunk[..write_size])
             .map_err(|_| OtaError::FlashRWError)?;
 
-        #[cfg(feature = "log")]
-        log::debug!(
+        debug!(
             "[OTA] Wrote {} bytes to ota partition at 0x{:x}",
-            write_size,
-            progress.flash_offset
+            write_size, progress.flash_offset
         );
 
         progress.last_crc = crc32::calc_crc32(&chunk[..write_size], progress.last_crc);
@@ -118,8 +117,7 @@ where
     pub fn ota_flush(&mut self, verify: bool, rollback: bool) -> Result<()> {
         if verify {
             if !self.ota_verify()? {
-                #[cfg(feature = "log")]
-                log::error!("[OTA] Verify failed! Not flushing...");
+                error!("[OTA] Verify failed! Not flushing...");
 
                 return Err(OtaError::OtaVerifyError);
             }
@@ -131,12 +129,9 @@ where
             .ok_or_else(|| OtaError::OtaNotStarted)?;
 
         if progress.target_crc != progress.last_crc {
-            #[cfg(feature = "log")]
-            {
-                log::warn!("[OTA] Calculated crc: {:?}", progress.last_crc);
-                log::warn!("[OTA] Target crc: {:?}", progress.target_crc);
-                log::error!("[OTA] Crc check failed! Cant finish ota update...");
-            }
+            warn!("[OTA] Calculated crc: {}", progress.last_crc);
+            warn!("[OTA] Target crc: {}", progress.target_crc);
+            error!("[OTA] Crc check failed! Cant finish ota update...");
 
             return Err(OtaError::WrongCRC);
         }
@@ -217,8 +212,7 @@ where
             1 => self.pinfo.otadata_offset,
             2 => self.pinfo.otadata_offset + (self.pinfo.otadata_size >> 1),
             _ => {
-                #[cfg(feature = "log")]
-                log::error!("Use slot1 or slot2!");
+                error!("Use slot1 or slot2!");
                 return Err(OtaError::CannotFindCurrentBootPartition);
             }
         };
@@ -303,8 +297,7 @@ where
         if current_slot.ota_state != OtaImgState::EspOtaImgValid {
             self.set_ota_state(current_slot_nmb, OtaImgState::EspOtaImgValid)?;
 
-            #[cfg(feature = "log")]
-            log::info!("Marked current slot as valid!");
+            info!("Marked current slot as valid!");
         }
 
         Ok(())
@@ -315,8 +308,7 @@ where
         if current_slot.ota_state != OtaImgState::EspOtaImgValid {
             self.set_ota_state(current_slot_nmb, OtaImgState::EspOtaImgInvalid)?;
 
-            #[cfg(feature = "log")]
-            log::info!("Marked current slot as invalid!");
+            info!("Marked current slot as invalid!");
         }
 
         Ok(())

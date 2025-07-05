@@ -1,4 +1,4 @@
-use crate::mmu_hal::{MMU_PAGE_16KB, MMU_PAGE_32KB, MMU_PAGE_64KB, MMU_PAGE_8KB};
+use crate::mmu_hal::{MMU_PAGE_8KB, MMU_PAGE_16KB, MMU_PAGE_32KB, MMU_PAGE_64KB};
 
 const SOC_MMU_ENTRY_NUM: u32 = 256;
 const SOC_MMU_VALID_VAL_MASK: u32 = 0x1ff;
@@ -27,8 +27,7 @@ pub fn mmu_ll_get_entry_id(mmu_id: u32, vaddr: u32) -> u32 {
         MMU_PAGE_16KB => 14,
         MMU_PAGE_8KB => 13,
         _ => {
-            #[cfg(feature = "log")]
-            log::error!("mmu_ll_get_entry_id failed!");
+            error!("mmu_ll_get_entry_id failed!");
 
             0
         }
@@ -44,8 +43,7 @@ pub fn mmu_ll_entry_id_to_paddr_base(mmu_id: u32, entry_id: u32) -> u32 {
         MMU_PAGE_16KB => 14,
         MMU_PAGE_8KB => 13,
         _ => {
-            #[cfg(feature = "log")]
-            log::error!("mmu_ll_entry_id_to_paddr_base failed!");
+            error!("mmu_ll_entry_id_to_paddr_base failed!");
 
             0
         }
