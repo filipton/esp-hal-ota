@@ -84,10 +84,7 @@ where
 
     /// Writes next firmware chunk
     pub fn ota_write_chunk(&mut self, chunk: &[u8]) -> Result<bool> {
-        let progress = self
-            .progress
-            .as_mut()
-            .ok_or_else(|| OtaError::OtaNotStarted)?;
+        let progress = self.progress.as_mut().ok_or(OtaError::OtaNotStarted)?;
 
         if progress.remaining == 0 {
             return Ok(true);
@@ -115,18 +112,13 @@ where
     /// verify - should it read flash and check crc
     /// rollback - if rollbacks enable (will set ota_state to ESP_OTA_IMG_NEW)
     pub fn ota_flush(&mut self, verify: bool, rollback: bool) -> Result<()> {
-        if verify {
-            if !self.ota_verify()? {
-                error!("[OTA] Verify failed! Not flushing...");
+        if verify && !self.ota_verify()? {
+            error!("[OTA] Verify failed! Not flushing...");
 
-                return Err(OtaError::OtaVerifyError);
-            }
+            return Err(OtaError::OtaVerifyError);
         }
 
-        let progress = self
-            .progress
-            .clone()
-            .ok_or_else(|| OtaError::OtaNotStarted)?;
+        let progress = self.progress.clone().ok_or(OtaError::OtaNotStarted)?;
 
         if progress.target_crc != progress.last_crc {
             warn!("[OTA] Calculated crc: {}", progress.last_crc);
@@ -147,10 +139,7 @@ where
 
     /// It reads written flash and checks crc
     pub fn ota_verify(&mut self) -> Result<bool> {
-        let progress = self
-            .progress
-            .clone()
-            .ok_or_else(|| OtaError::OtaNotStarted)?;
+        let progress = self.progress.clone().ok_or(OtaError::OtaNotStarted)?;
 
         let mut calc_crc = 0;
         let mut bytes = [0; OTA_VERIFY_READ_SIZE];
@@ -262,7 +251,7 @@ where
         let (slot1, slot2) = self.get_ota_boot_entries();
         let current_partition = self
             .get_currently_booted_partition()
-            .ok_or_else(|| OtaError::CannotFindCurrentBootPartition)?;
+            .ok_or(OtaError::CannotFindCurrentBootPartition)?;
 
         let slot1_part = helpers::seq_to_part(slot1.seq, self.pinfo.ota_partitions_count);
         let slot2_part = helpers::seq_to_part(slot2.seq, self.pinfo.ota_partitions_count);
@@ -279,7 +268,7 @@ where
         let (slot1, slot2) = self.get_ota_boot_entries();
         let current_partition = self
             .get_currently_booted_partition()
-            .ok_or_else(|| OtaError::CannotFindCurrentBootPartition)?;
+            .ok_or(OtaError::CannotFindCurrentBootPartition)?;
 
         let slot1_part = helpers::seq_to_part(slot1.seq, self.pinfo.ota_partitions_count);
         let slot2_part = helpers::seq_to_part(slot2.seq, self.pinfo.ota_partitions_count);
@@ -326,12 +315,12 @@ where
         let mut last_ota_part: i8 = -1;
         for read_offset in (0..PART_SIZE).step_by(32) {
             _ = flash.read(PART_OFFSET + read_offset, &mut bytes);
-            if &bytes == &[0xFF; 32] {
+            if bytes == [0xFF; 32] {
                 break;
             }
 
             let magic = &bytes[0..2];
-            if magic != &[0xAA, 0x50] {
+            if magic != [0xAA, 0x50] {
                 continue;
             }
 

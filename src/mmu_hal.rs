@@ -40,9 +40,7 @@ pub fn esp_get_current_running_partition(partitions: &[(u32, u32)]) -> Option<us
     let paddr_base = crate::mmu_ll::mmu_ll_entry_id_to_paddr_base(mmu_id, entry_id);
     let paddr = paddr_base | offset;
 
-    for i in 0..partitions.len() {
-        let part = partitions[i];
-
+    for (i, part) in partitions.iter().enumerate() {
         if paddr >= part.0 && paddr < part.0 + part.1 {
             return Some(i);
         }

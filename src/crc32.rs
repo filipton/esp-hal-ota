@@ -35,10 +35,10 @@ const CRC_32_TAB: [u32; 256] = [
 
 pub fn calc_crc32(buf: &[u8], mut crc: u32) -> u32 {
     crc = !crc;
-    for i in 0..buf.len() {
-        let crc_idx = (crc ^ buf[i] as u32) & 0xFF;
+    for &elem in buf {
+        let crc_idx = (crc ^ elem as u32) & 0xFF;
         crc = CRC_32_TAB[crc_idx as usize] ^ (crc >> 8);
     }
 
-    (crc ^ 0xFFFFFFFF) & 0xFFFFFFFF
+    crc ^ 0xFFFFFFFF
 }

@@ -76,20 +76,26 @@ const SOC_DPORT_WORKAROUND_DIS_INTERRUPT_LVL: u32 = 5;
 #[inline(always)]
 unsafe fn dport_interrupt_disable() -> u32 {
     let level: u32;
-    core::arch::asm!(
-        "rsil {0}, {1}",
-        out(reg) level,
-        const SOC_DPORT_WORKAROUND_DIS_INTERRUPT_LVL,
-        options(nomem, nostack)
-    );
+
+    unsafe {
+        core::arch::asm!(
+            "rsil {0}, {1}",
+            out(reg) level,
+            const SOC_DPORT_WORKAROUND_DIS_INTERRUPT_LVL,
+            options(nomem, nostack)
+        );
+    }
+
     level
 }
 
 #[inline(always)]
 unsafe fn dport_interrupt_restore(level: u32) {
-    core::arch::asm!(
-        "wsr.ps {0}; rsync",
-        in(reg) level,
-        options(nomem, nostack)
-    );
+    unsafe {
+        core::arch::asm!(
+            "wsr.ps {0}; rsync",
+            in(reg) level,
+            options(nomem, nostack)
+        );
+    }
 }
