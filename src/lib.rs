@@ -87,8 +87,7 @@ where
     /// Returns progress details to save for resumption later
     pub fn get_progress_details(&self) -> Option<(u32, u32)> {
         if self.progress.is_none() {
-            #[cfg(feature = "log")]
-            log::warn!("[OTA] Cannot get progress details!");
+            warn!("[OTA] Cannot get progress details!");
 
             return None;
         }
