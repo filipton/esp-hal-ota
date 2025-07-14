@@ -70,6 +70,33 @@ where
         Ok(())
     }
 
+    /// Resumes an OTA update after progress has been lost
+    pub fn ota_resume(&mut self, flash_size: u32, remaining: u32, target_crc: u32, last_crc: u32) {
+        let next_part = self.get_next_ota_partition().unwrap_or(0);
+        let ota_offset = self.get_partitions()[next_part].0;
+        self.progress = Some(FlashProgress {
+            last_crc,
+            flash_size,
+            remaining,
+            flash_offset: ota_offset,
+            target_partition: next_part,
+            target_crc,
+        });
+    }
+
+    /// Returns progress details to save for resumption later
+    pub fn get_progress_details(&self) -> Option<(u32, u32)> {
+        if self.progress.is_none() {
+            #[cfg(feature = "log")]
+            log::warn!("[OTA] Cannot get progress details!");
+
+            return None;
+        }
+
+        let progress = self.progress.as_ref().unwrap();
+        Some((progress.remaining, progress.last_crc))
+    }
+
     /// Returns ota progress in f32 (0..1)
     pub fn get_ota_progress(&self) -> f32 {
         if self.progress.is_none() {
