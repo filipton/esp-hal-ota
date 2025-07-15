@@ -30,6 +30,11 @@ where
     pinfo: PartitionInfo,
 }
 
+pub struct ProgressDetails {
+    pub remaining: u32,
+    pub last_crc: u32,
+}
+
 impl<S> Ota<S>
 where
     S: ReadStorage + Storage,
@@ -85,7 +90,7 @@ where
     }
 
     /// Returns progress details to save for resumption later
-    pub fn get_progress_details(&self) -> Option<(u32, u32)> {
+    pub fn get_progress_details(&self) -> Option<ProgressDetails> {
         if self.progress.is_none() {
             warn!("[OTA] Cannot get progress details!");
 
@@ -93,7 +98,10 @@ where
         }
 
         let progress = self.progress.as_ref().unwrap();
-        Some((progress.remaining, progress.last_crc))
+        Some(ProgressDetails {
+            remaining: progress.remaining,
+            last_crc: progress.last_crc,
+        })
     }
 
     /// Returns ota progress in f32 (0..1)
