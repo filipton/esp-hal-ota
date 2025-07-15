@@ -76,17 +76,51 @@ where
     }
 
     /// Resumes an OTA update after progress has been lost
-    pub fn ota_resume(&mut self, flash_size: u32, remaining: u32, target_crc: u32, last_crc: u32) {
+    pub fn ota_resume(
+        &mut self,
+        flash_size: u32,
+        remaining: u32,
+        target_crc: u32,
+        last_crc: u32,
+        verify_crc: bool,
+    ) -> Result<()> {
         let next_part = self.get_next_ota_partition().unwrap_or(0);
         let ota_offset = self.get_partitions()[next_part].0;
+
+        if verify_crc {
+            let mut calc_crc = 0;
+            let mut bytes = [0; OTA_VERIFY_READ_SIZE];
+            let mut written = flash_size - remaining;
+            let mut partition_offset = ota_offset;
+
+            loop {
+                let n = written.min(OTA_VERIFY_READ_SIZE as u32);
+                if n == 0 {
+                    break;
+                }
+
+                _ = self.flash.read(partition_offset, &mut bytes[..n as usize]);
+                partition_offset += n;
+                written -= n;
+
+                calc_crc = crc32::calc_crc32(&bytes[..n as usize], calc_crc);
+            }
+
+            if calc_crc != last_crc {
+                return Err(OtaError::WrongCRC);
+            }
+        }
+
         self.progress = Some(FlashProgress {
             last_crc,
             flash_size,
             remaining,
-            flash_offset: ota_offset,
+            flash_offset: ota_offset + (flash_size - remaining),
             target_partition: next_part,
             target_crc,
         });
+
+        Ok(())
     }
 
     /// Returns progress details to save for resumption later
