@@ -6,20 +6,20 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-esp-backtrace = { version = "0.16.0", features = [ "exception-handler", "panic-handler", "println" ] }
-esp-hal = { version = "1.0.0-beta.1", features = ["unstable"] }
-esp-println = { version = "0.14.0", features = ["log-04"] }
+esp-backtrace = { version = "0.17.0", features = [ "exception-handler", "panic-handler", "println" ] }
+esp-hal = { version = "1.0.0-rc.0", features = ["unstable"] }
+esp-println = { version = "0.15.0", features = ["log-04"] }
 log = { version = "0.4.27" }
-esp-wifi = { version = "0.14.0", features = [ "wifi", "ble" ] }
-esp-hal-embassy = { version = "0.8.0", features = [] }
+esp-wifi = { version = "0.15.0", features = [ "wifi", "ble" ] }
+esp-hal-embassy = { version = "0.9.0", features = [] }
 embassy-executor = { version = "0.7.0", package = "embassy-executor", features = ["arch-riscv32", "task-arena-size-10240"] }
 embassy-net = { version = "0.7.0", features = ["tcp", "udp", "dhcpv4", "medium-ethernet"] }
 embassy-time = { version = "0.4.0" }
-esp-storage = { version = "0.6.0", features = [] }
-esp-hal-ota = { path = "/home/pilif/projects/esp-hal-ota", features = ["log"] }
-static_cell = { version = "2.1.0", features = ["nightly"] }
-#xtensa-lx-rt = { version = "0.17.2", optional = true, features = ["esp32s3", "float-save-restore"] }
+esp-storage = { version = "0.7.0", features = [] }
+esp-hal-ota = { path = "../", features = ["log"] }
+static_cell = { version = "2.1.1", features = ["nightly"] }
 esp-alloc = "0.8.0"
+esp-bootloader-esp-idf = { version = "0.2.0", features = ["log-04"] }
 
 [build-dependencies]
 dotenvy = "0.15.7"
@@ -40,6 +40,6 @@ overflow-checks = false
 
 [features]
 default = ["esp32s3"]
-esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-wifi/esp32s3", "esp-hal-embassy/esp32s3", "esp-storage/esp32s3", "esp-hal-ota/esp32s3"]
-esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-wifi/esp32c3", "esp-hal-embassy/esp32c3", "esp-storage/esp32c3", "esp-hal-ota/esp32c3"]
-esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-wifi/esp32", "esp-hal-embassy/esp32", "esp-storage/esp32", "esp-hal-ota/esp32"]
+esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-wifi/esp32s3", "esp-hal-embassy/esp32s3", "esp-storage/esp32s3", "esp-hal-ota/esp32s3", "esp-bootloader-esp-idf/esp32s3"]
+esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-wifi/esp32c3", "esp-hal-embassy/esp32c3", "esp-storage/esp32c3", "esp-hal-ota/esp32c3", "esp-bootloader-esp-idf/esp32c3"]
+esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-wifi/esp32", "esp-hal-embassy/esp32", "esp-storage/esp32", "esp-hal-ota/esp32", "esp-bootloader-esp-idf/esp32"]

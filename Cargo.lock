@@ -64,63 +64,63 @@ dependencies = [
 
 [[package]]
 name = "esp32"
-version = "0.37.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83ddfdb413ef0739d84bd3fce771e6e0feb6457ac1bcdd7a1dcd6326061e919d"
+checksum = "a7680f79e3a4770e59c2dc25b17dcd852921ee57ffae9a4c4806c9ca5001d54d"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32c2"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14ec669dc34787e73c8a7d99059fcdbd800cb0699c2ea9cd0a3d99cb5e9caefb"
+checksum = "da1bcf86fca83543e0e95561cba27bbcc6b6e7adc5428f49187f5868bc0c3ed2"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32c3"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24c0b2a8e8efa1755a28ca3ef54c85436f76531ba93dc79b55d5330349d067d7"
+checksum = "ce2c5a33d4377f974cbe8cadf8307f04f2c39755704cb09e81852c63ee4ac7b8"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32c6"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8009092b2a8f41532ce836ea7403b657eca7cd396c4513c650ade648831ed76"
+checksum = "2ca8fc81b7164df58b5e04aaac9e987459312e51903cca807317990293973a6e"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32h2"
-version = "0.16.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03f683882d3713ec41379980406117b15fb48c2be8d5acdf1795ecb5fe9b6e41"
+checksum = "80171d08c17d8c63b53334c60ca654786a7593481531d19b639c4e5c76d276de"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32s2"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4391e38b14eb59a675e816598bde7d9b8c8f43a695a284bd97bcd0cf3092404"
+checksum = "4c90d347480fca91f4be3e94b576af9c6c7987795c58dc3c5a7c108b6b3966dc"
 dependencies = [
  "vcell",
 ]
 
 [[package]]
 name = "esp32s3"
-version = "0.32.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27a4c6fd31207a297fc29d2b8f4da27facf45f8c83041f7c0f978aa65ab367c9"
+checksum = "a3769c56222c4548833f236c7009f1f8b3f2387af26366f6bd1cea456666a49d"
 dependencies = [
  "vcell",
 ]

@@ -34,6 +34,8 @@ macro_rules! mk_static {
     }};
 }
 
+esp_bootloader_esp_idf::esp_app_desc!();
+
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     #[cfg(not(feature = "esp32"))]
@@ -77,7 +79,7 @@ async fn main(spawner: Spawner) {
 
     let init = &*mk_static!(
         EspWifiController<'static>,
-        esp_wifi::init(timg1.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap()
+        esp_wifi::init(timg1.timer0, rng.clone()).unwrap()
     );
 
     let timg0 = TimerGroup::new(peripherals.TIMG0);

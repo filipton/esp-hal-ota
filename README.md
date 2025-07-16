@@ -16,12 +16,12 @@ But esp32s3, esp32c3 and esp32 are working perfectly fine.
 
 ## Getting started
 - Create `partitions.csv` file in project root (copy `partitions.csv.template` file)
-- In your project edit `./.cargo/config.toml` file and append `-T ./partitions.csv` to the `runner` attribute
+- In your project edit `./.cargo/config.toml` file and append `--partition-table ./partitions.csv` to the `runner` attribute
 - Optionally append `--erase-parts otadata` to `./cargo/config.toml` to fix some ota issues
 
 ```toml
 [target.xtensa-esp32s3-none-elf]
-runner = "espflash flash --monitor -T ./partitions.csv --erase-parts otadata"
+runner = "espflash flash --monitor --partition-table ./partitions.csv --erase-parts otadata"
 ```
 
 ## Example

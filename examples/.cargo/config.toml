@@ -4,13 +4,13 @@ esp32s3 = "run --no-default-features --features=esp32s3 --target=xtensa-esp32s3-
 esp32 = "run --no-default-features --features=esp32 --target=xtensa-esp32-none-elf"
 
 [target.'cfg(target_arch = "riscv32")']
-runner    = "espflash flash --monitor -T ./partitions.csv --erase-parts otadata"
+runner    = "espflash flash --monitor --partition-table ./partitions.csv --erase-parts otadata"
 rustflags = [
   "-C", "force-frame-pointers",
 ]
 
 [target.'cfg(target_arch = "xtensa")']
-runner    = "espflash flash --monitor -T ./partitions.csv --erase-parts otadata"
+runner    = "espflash flash --monitor --partition-table ./partitions.csv --erase-parts otadata"
 rustflags = [
   "-C", "link-arg=-nostartfiles",
 ]
