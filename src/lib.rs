@@ -35,12 +35,44 @@ pub struct ProgressDetails {
     pub last_crc: u32,
 }
 
+#[derive(Debug)]
+pub struct OtaConfiguratuion {
+    partition_table_offset: u32,
+}
+impl OtaConfiguratuion {
+    /// Create default configuration of the [`Ota`] process.
+    ///
+    /// Notably this uses the default partition table offset of `0x8000`
+    pub const fn new() -> Self {
+        Self {
+            partition_table_offset: PART_OFFSET,
+        }
+    }
+
+    /// Set custom partition table offset
+    pub const fn with_partition_table_offset(self, partition_table_offset: u32) -> Self {
+        Self {
+            partition_table_offset,
+            ..self
+        }
+    }
+}
+impl Default for OtaConfiguratuion {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S> Ota<S>
 where
     S: ReadStorage + Storage,
 {
-    pub fn new(mut flash: S) -> Result<Self> {
-        let pinfo = Self::read_partitions(&mut flash)?;
+    pub fn new(flash: S) -> Result<Self> {
+        Self::with_configuration(flash, OtaConfiguratuion::new())
+    }
+
+    pub fn with_configuration(mut flash: S, config: OtaConfiguratuion) -> Result<Self> {
+        let pinfo = Self::read_partitions(&mut flash, config.partition_table_offset)?;
         if pinfo.ota_partitions_count < 2 {
             error!("Not enough OTA partitions! (>= 2)");
 
@@ -371,7 +403,7 @@ where
         Ok(())
     }
 
-    fn read_partitions(flash: &mut S) -> Result<PartitionInfo> {
+    fn read_partitions(flash: &mut S, partition_table_offset: u32) -> Result<PartitionInfo> {
         let mut tmp_pinfo = PartitionInfo {
             ota_partitions: [(0, 0); 16],
             ota_partitions_count: 0,
@@ -382,7 +414,7 @@ where
         let mut bytes = [0xFF; 32];
         let mut last_ota_part: i8 = -1;
         for read_offset in (0..PART_SIZE).step_by(32) {
-            _ = flash.read(PART_OFFSET + read_offset, &mut bytes);
+            _ = flash.read(partition_table_offset + read_offset, &mut bytes);
             if bytes == [0xFF; 32] {
                 break;
             }
