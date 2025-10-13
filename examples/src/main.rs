@@ -10,11 +10,11 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal_ota::Ota;
-use esp_storage::FlashStorage;
-use esp_wifi::{
-    EspWifiController,
-    wifi::{ClientConfiguration, Configuration, WifiController, WifiDevice, WifiEvent, WifiState},
+use esp_radio::{
+    Controller,
+    wifi::{ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStaState},
 };
+use esp_storage::FlashStorage;
 
 const WIFI_SSID: &'static str = env!("SSID");
 const WIFI_PSK: &'static str = env!("PSK");
@@ -36,7 +36,7 @@ macro_rules! mk_static {
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[esp_hal_embassy::main]
+#[esp_rtos::main]
 async fn main(spawner: Spawner) {
     #[cfg(not(feature = "esp32"))]
     {
@@ -74,19 +74,22 @@ async fn main(spawner: Spawner) {
     esp_println::logger::init_logger_from_env();
     //log::set_max_level(log::LevelFilter::Info); // only for esp32s3??
 
-    let rng = esp_hal::rng::Rng::new(peripherals.RNG);
-    let timg1 = TimerGroup::new(peripherals.TIMG1);
-
-    let init = &*mk_static!(
-        EspWifiController<'static>,
-        esp_wifi::init(timg1.timer0, rng.clone()).unwrap()
-    );
-
     let timg0 = TimerGroup::new(peripherals.TIMG0);
-    esp_hal_embassy::init(timg0.timer0);
+
+    #[cfg(any(feature = "esp32s3", feature = "esp32"))]
+    esp_rtos::start(timg0.timer0);
+
+    #[cfg(feature = "esp32c3")]
+    let software_interrupt =
+        esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
+
+    #[cfg(feature = "esp32c3")]
+    esp_rtos::start(timg0.timer0, software_interrupt.software_interrupt0);
+
+    let init = &*mk_static!(Controller<'static>, esp_radio::init().unwrap());
 
     let wifi = peripherals.WIFI;
-    let (controller, interfaces) = esp_wifi::wifi::new(&init, wifi).unwrap();
+    let (controller, interfaces) = esp_radio::wifi::new(&init, wifi, Default::default()).unwrap();
 
     let config = Config::dhcpv4(Default::default());
     let seed = 69420;
@@ -109,7 +112,10 @@ async fn main(spawner: Spawner) {
 
     // mark ota partition valid
     {
-        let mut ota = Ota::new(FlashStorage::new()).expect("Cannot create ota");
+        let mut ota = Ota::new(FlashStorage::new(unsafe {
+            peripherals.FLASH.clone_unchecked()
+        }))
+        .expect("Cannot create ota");
         _ = ota.ota_mark_app_valid(); //do not unwrap here if using factory/test partition
     }
 
@@ -149,7 +155,10 @@ async fn main(spawner: Spawner) {
     log::info!("flash_size: {flash_size}");
     log::info!("target_crc: {target_crc}");
 
-    let mut ota = Ota::new(FlashStorage::new()).expect("Cannot create ota");
+    let mut ota = Ota::new(FlashStorage::new(unsafe {
+        peripherals.FLASH.clone_unchecked()
+    }))
+    .expect("Cannot create ota");
     ota.ota_begin(flash_size, target_crc).unwrap();
 
     let mut bytes_read: usize = 0;
@@ -199,18 +208,18 @@ async fn connection(mut controller: WifiController<'static>, stack: Stack<'stati
     log::info!("start connection task");
     log::info!("Device capabilities: {:?}", controller.capabilities());
     loop {
-        if esp_wifi::wifi::wifi_state() == WifiState::StaConnected {
+        if esp_radio::wifi::sta_state() == WifiStaState::Connected {
             // wait until we're no longer connected
             controller.wait_for_event(WifiEvent::StaDisconnected).await;
             Timer::after(Duration::from_millis(5000)).await
         }
         if !matches!(controller.is_started(), Ok(true)) {
-            let client_config = Configuration::Client(ClientConfiguration {
-                ssid: WIFI_SSID.try_into().expect("Wifi ssid parse"),
-                password: WIFI_PSK.try_into().expect("Wifi psk parse"),
-                ..Default::default()
-            });
-            controller.set_configuration(&client_config).unwrap();
+            let client_config = ModeConfig::Client(
+                ClientConfig::default()
+                    .with_ssid(WIFI_SSID.try_into().expect("Wifi ssid parse"))
+                    .with_password(WIFI_PSK.try_into().expect("Wifi psk parse")),
+            );
+            controller.set_config(&client_config).unwrap();
             log::info!("Starting wifi");
             controller.start_async().await.unwrap();
             log::info!("Wifi started!");
