@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 esp-backtrace = { version = "0.18.0", features = [ "panic-handler", "println" ] }
 esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
 esp-println = { version = "0.16.0", features = ["log-04"] }
-log = { version = "0.4.28" }
+log = { version = "0.4.29" }
 esp-radio = { version = "0.16.0", features = [ "unstable", "wifi", "ble" ] }
 esp-rtos = { version = "0.1.0", features = ["esp-radio", "embassy"] }
 embassy-executor = { version = "0.9.1", package = "embassy-executor", features = ["arch-riscv32"] }

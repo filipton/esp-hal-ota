@@ -93,13 +93,16 @@ where
     /// To begin ota update (need to provide flash size)
     pub fn ota_begin(&mut self, size: u32, target_crc: u32) -> Result<()> {
         let next_part = self.get_next_ota_partition().unwrap_or(0);
+        let p = self.get_partitions()[next_part];
+        if p.1 < size {
+            return Err(OtaError::OtaPartitionTooSmall);
+        }
 
-        let ota_offset = self.get_partitions()[next_part].0;
         self.progress = Some(FlashProgress {
             last_crc: 0,
             flash_size: size,
             remaining: size,
-            flash_offset: ota_offset,
+            flash_offset: p.0,
             target_partition: next_part,
             target_crc,
         });
@@ -117,8 +120,12 @@ where
         verify_crc: bool,
     ) -> Result<()> {
         let next_part = self.get_next_ota_partition().unwrap_or(0);
-        let ota_offset = self.get_partitions()[next_part].0;
+        let p = self.get_partitions()[next_part];
+        if p.1 < flash_size {
+            return Err(OtaError::OtaPartitionTooSmall);
+        }
 
+        let ota_offset = p.0;
         if verify_crc {
             let mut calc_crc = 0;
             let mut bytes = [0; OTA_VERIFY_READ_SIZE];
@@ -192,6 +199,9 @@ where
 
         let write_size = chunk.len() as u32;
         let write_size = write_size.min(progress.remaining) as usize;
+        if write_size > progress.remaining as usize {
+            return Err(OtaError::OtaPartitionTooSmall);
+        }
 
         self.flash
             .write(progress.flash_offset, &chunk[..write_size])

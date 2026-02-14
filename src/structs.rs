@@ -3,6 +3,7 @@ pub(crate) type Result<T> = core::result::Result<T, OtaError>;
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum OtaError {
+    OtaPartitionTooSmall,
     NotEnoughPartitions,
     OtaNotStarted,
     FlashRWError,
