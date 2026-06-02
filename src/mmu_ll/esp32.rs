@@ -1,16 +1,11 @@
 const SOC_MMU_VADDR_MASK: u32 = 0x3FFFFF;
 const SOC_MMU_INVALID: u32 = 1 << 8;
 const MMU_LL_PSRAM_ENTRY_START_ID: u32 = 1152;
-const SOC_IRAM0_CACHE_ADDRESS_LOW: u32 = 0x400D0000;
-const SOC_IRAM0_CACHE_ADDRESS_HIGH: u32 = 0x40400000;
-const SOC_IRAM1_CACHE_ADDRESS_LOW: u32 = 0x40400000;
-const SOC_IRAM1_CACHE_ADDRESS_HIGH: u32 = 0x40800000;
-const SOC_IROM0_CACHE_ADDRESS_LOW: u32 = 0x40800000;
-const SOC_IROM0_CACHE_ADDRESS_HIGH: u32 = 0x40C00000;
-const SOC_DRAM1_CACHE_ADDRESS_LOW: u32 = 0x3F800000;
-const SOC_DRAM1_CACHE_ADDRESS_HIGH: u32 = 0x3FC00000;
-const SOC_DROM0_CACHE_ADDRESS_LOW: u32 = 0x3F400000;
-const SOC_DROM0_CACHE_ADDRESS_HIGH: u32 = 0x3F800000;
+const SOC_IRAM0_CACHE: core::ops::Range<u32> = 0x400D0000..0x40400000;
+const SOC_IRAM1_CACHE: core::ops::Range<u32> = 0x40400000..0x40800000;
+const SOC_IROM0_CACHE: core::ops::Range<u32> = 0x40800000..0x40C00000;
+const SOC_DRAM1_CACHE: core::ops::Range<u32> = 0x3F800000..0x3FC00000;
+const SOC_DROM0_CACHE: core::ops::Range<u32> = 0x3F400000..0x3F800000;
 const DPORT_PRO_FLASH_MMU_TABLE: u32 = 0x3FF10000;
 
 pub fn mmu_ll_get_page_size(_mmu_id: u32) -> u32 {
@@ -22,23 +17,23 @@ pub fn mmu_ll_get_entry_id(_mmu_id: u32, vaddr: u32) -> u32 {
     let mut shift_code = 0;
     let mut vaddr_mask = 0;
 
-    if soc_address_in_bus!(SOC_DROM0_CACHE, vaddr) {
+    if SOC_DROM0_CACHE.contains(&vaddr) {
         offset = 0;
         shift_code = 16;
         vaddr_mask = SOC_MMU_VADDR_MASK;
-    } else if soc_address_in_bus!(SOC_IRAM0_CACHE, vaddr) {
+    } else if SOC_IRAM0_CACHE.contains(&vaddr) {
         offset = 64;
         shift_code = 16;
         vaddr_mask = SOC_MMU_VADDR_MASK;
-    } else if soc_address_in_bus!(SOC_IRAM1_CACHE, vaddr) {
+    } else if SOC_IRAM1_CACHE.contains(&vaddr) {
         offset = 128;
         shift_code = 16;
         vaddr_mask = SOC_MMU_VADDR_MASK;
-    } else if soc_address_in_bus!(SOC_IROM0_CACHE, vaddr) {
+    } else if SOC_IROM0_CACHE.contains(&vaddr) {
         offset = 192;
         shift_code = 16;
         vaddr_mask = SOC_MMU_VADDR_MASK;
-    } else if soc_address_in_bus!(SOC_DRAM1_CACHE, vaddr) {
+    } else if SOC_DRAM1_CACHE.contains(&vaddr) {
         offset = MMU_LL_PSRAM_ENTRY_START_ID;
         shift_code = 15;
         vaddr_mask = SOC_MMU_VADDR_MASK >> 1;

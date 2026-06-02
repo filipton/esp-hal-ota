@@ -1,11 +1,3 @@
-#[cfg(any(feature = "esp32", feature = "esp32s2"))]
-macro_rules! soc_address_in_bus {
-    ($bus_name:ident, $vaddr:ident) => {{
-        (concat_idents!($bus_name, _ADDRESS_LOW)..concat_idents!($bus_name, _ADDRESS_HIGH))
-            .contains(&$vaddr)
-    }};
-}
-
 #[cfg(feature = "esp32")]
 mod esp32;
 #[cfg(feature = "esp32")]
