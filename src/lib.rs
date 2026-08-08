@@ -6,9 +6,9 @@
 mod logging;
 
 use embedded_storage::{ReadStorage, Storage};
+use esp_rom_sys::rom::crc::crc32_le;
 pub use structs::*;
 
-pub mod crc32;
 pub mod helpers;
 pub mod mmu_hal;
 pub mod mmu_ll;
@@ -141,7 +141,7 @@ where
                 partition_offset += n;
                 written -= n;
 
-                calc_crc = crc32::calc_crc32(&bytes[..n as usize], calc_crc);
+                calc_crc = crc32_le(calc_crc, &bytes[..n as usize]);
             }
 
             if calc_crc != last_crc {
@@ -211,7 +211,7 @@ where
             write_size, progress.flash_offset
         );
 
-        progress.last_crc = crc32::calc_crc32(&chunk[..write_size], progress.last_crc);
+        progress.last_crc = crc32_le(progress.last_crc, &chunk[..write_size]);
 
         progress.flash_offset += write_size as u32;
         progress.remaining -= write_size as u32;
@@ -266,7 +266,7 @@ where
             partition_offset += n;
             remaining -= n;
 
-            calc_crc = crc32::calc_crc32(&bytes[..n as usize], calc_crc);
+            calc_crc = crc32_le(calc_crc, &bytes[..n as usize]);
         }
 
         Ok(calc_crc == progress.target_crc)
@@ -285,7 +285,7 @@ where
         }
 
         let flash = &mut self.flash;
-        let target_crc = crc32::calc_crc32(&target_seq.to_le_bytes(), 0xFFFFFFFF);
+        let target_crc = crc32_le(0xFFFFFFFF, &target_seq.to_le_bytes());
         if seq1 > seq2 {
             let offset = self.pinfo.otadata_offset + (self.pinfo.otadata_size >> 1);
 

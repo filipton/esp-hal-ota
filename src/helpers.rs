@@ -9,7 +9,7 @@ pub const fn seq_to_part(seq: u32, partitions_count: usize) -> usize {
 /// Helper funcion!
 /// If crc of seq is correct it returns seq, otherwise default value is returned
 pub fn seq_or_default(seq: &[u8], crc: u32, default: u32) -> u32 {
-    let crc_calc = crate::crc32::calc_crc32(seq, 0xFFFFFFFF);
+    let crc_calc = esp_rom_sys::rom::crc::crc32_le(0xFFFFFFFF, seq);
     if crc == crc_calc {
         return u32::from_le_bytes(seq.try_into().expect("Wrong size?"));
     }
@@ -28,6 +28,6 @@ pub fn is_crc_seq_correct(seq: u32, crc: u32) -> bool {
         buf
     };
 
-    let crc_calc = crate::crc32::calc_crc32(&bytes, 0xFFFFFFFF);
+    let crc_calc = esp_rom_sys::rom::crc::crc32_le(0xFFFFFFFF, &bytes);
     crc == crc_calc
 }
