@@ -6,8 +6,14 @@
 mod logging;
 
 use embedded_storage::{ReadStorage, Storage};
-use esp_rom_sys::rom::crc::crc32_le;
+#[cfg(feature = "esp-rom-sys")]
+pub(crate) use esp_rom_sys::rom::crc::crc32_le;
 pub use structs::*;
+
+#[cfg(not(feature = "esp-rom-sys"))]
+pub(crate) fn crc32_le(crc: u32, _buf: &[u8]) -> u32 {
+    crc
+}
 
 pub mod helpers;
 pub mod mmu_hal;
