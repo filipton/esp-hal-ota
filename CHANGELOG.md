@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.2
+
+- ESP32-C5, ESP32-C61 and ESP32-S31 support (`esp32c5`, `esp32c61`, `esp32s31` features).
+- MMU page sizes of 128 KB and 256 KB (ESP32-S31 flash MMU).
+
 ## 0.7.0
 
 Breaking API cleanup, see [MIGRATING.md](MIGRATING.md).

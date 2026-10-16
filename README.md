@@ -14,7 +14,7 @@ A port of ESP-IDF's OTA logic with a complete streaming updater:
 [![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
 ## Limitations
-I cannot test if it works properly on esp32s2,esp32c2,esp32c6 and esp32h2.
+I cannot test if it works properly on esp32s2, esp32c2, esp32c5, esp32c6, esp32c61, esp32h2 and esp32s31.
 But esp32s3, esp32c3 and esp32 are working perfectly fine.
 
 ## Features

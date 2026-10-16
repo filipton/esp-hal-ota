@@ -1,6 +1,6 @@
 [package]
 name = "esp-hal-ota"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 license = "MIT"
 description = "OTA library for esp-hal"
@@ -24,8 +24,12 @@ esp32s3 = { version = "0.36.0", optional = true }
 esp32c2 = { version = "0.30.0", optional = true }
 esp32c3 = { version = "0.33.0", optional = true }
 esp32c6 = { version = "0.24.0", optional = true }
+esp32c5 = { version = "0.3.0", optional = true }
+esp32c61 = { version = "0.4.0", optional = true }
 
 esp32h2 = { version = "0.20.0", optional = true }
+
+esp32s31 = { version = "0.3.0", optional = true }
 
 [features]
 default = []
@@ -40,5 +44,9 @@ esp32s3 = ["dep:esp32s3", "esp-rom-sys/esp32s3"]
 esp32c2 = ["dep:esp32c2", "esp-rom-sys/esp32c2"]
 esp32c3 = ["dep:esp32c3", "esp-rom-sys/esp32c3"]
 esp32c6 = ["dep:esp32c6", "esp-rom-sys/esp32c6"]
+esp32c5 = ["dep:esp32c5", "esp-rom-sys/esp32c5"]
+esp32c61 = ["dep:esp32c61", "esp-rom-sys/esp32c61"]
 
 esp32h2 = ["dep:esp32h2", "esp-rom-sys/esp32h2"]
+
+esp32s31 = ["dep:esp32s31", "esp-rom-sys/esp32s31"]

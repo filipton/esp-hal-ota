@@ -118,20 +118,14 @@ fn partition_table_parsing() {
         part_entry(0, 0x10, OTA_0, OTA_SIZE),
         part_entry(0, 0x11, OTA_1, OTA_SIZE),
     ]);
-    assert_eq!(
-        Ota::new(no_otadata).err(),
-        Some(Error::NoOtadata)
-    );
+    assert_eq!(Ota::new(no_otadata).err(), Some(Error::NoOtadata));
 
     let out_of_order = flash_with(&[
         part_entry(1, 0, OTADATA, 0x2000),
         part_entry(0, 0x11, OTA_1, OTA_SIZE),
         part_entry(0, 0x10, OTA_0, OTA_SIZE),
     ]);
-    assert_eq!(
-        Ota::new(out_of_order).err(),
-        Some(Error::PartitionOrder)
-    );
+    assert_eq!(Ota::new(out_of_order).err(), Some(Error::PartitionOrder));
 }
 
 #[test]
@@ -141,10 +135,7 @@ fn full_update_writes_otadata() {
 
     let mut ota = Ota::new(default_flash()).unwrap();
     assert_eq!(ota.write(&image), Err(Error::NotStarted));
-    assert_eq!(
-        ota.begin(OTA_SIZE + 1, crc),
-        Err(Error::PartitionTooSmall)
-    );
+    assert_eq!(ota.begin(OTA_SIZE + 1, crc), Err(Error::PartitionTooSmall));
 
     ota.begin(image.len() as u32, crc).unwrap();
     assert_eq!(ota.write(&image[..1000]), Ok(false));
@@ -184,30 +175,26 @@ fn wrong_crc_does_not_touch_otadata() {
 fn boot_seq_follows_esp_idf() {
     let mut ota = Ota::new(default_flash()).unwrap();
 
-    ota.set_boot_partition(0, OtaImgState::New)
-        .unwrap();
+    ota.set_boot_partition(0, OtaImgState::New).unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (0, 1)
     );
 
-    ota.set_boot_partition(1, OtaImgState::New)
-        .unwrap();
+    ota.set_boot_partition(1, OtaImgState::New).unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (2, 1)
     );
 
-    ota.set_boot_partition(0, OtaImgState::New)
-        .unwrap();
+    ota.set_boot_partition(0, OtaImgState::New).unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (2, 3)
     );
 
     // same partition again keeps the seq, written to the inactive entry
-    ota.set_boot_partition(0, OtaImgState::New)
-        .unwrap();
+    ota.set_boot_partition(0, OtaImgState::New).unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (3, 3)
@@ -257,4 +244,21 @@ fn resume_validates_input() {
     ota.resume(&info, true).unwrap();
     assert_eq!(ota.write(&image[100..]), Ok(true));
     ota.finish(false).unwrap();
+}
+
+#[test]
+fn page_shift_covers_all_mmu_page_sizes() {
+    use crate::mmu_hal::*;
+    for (size, shift) in [
+        (MMU_PAGE_8KB, 13),
+        (MMU_PAGE_16KB, 14),
+        (MMU_PAGE_32KB, 15),
+        (MMU_PAGE_64KB, 16),
+        (MMU_PAGE_128KB, 17),
+        (MMU_PAGE_256KB, 18),
+    ] {
+        assert_eq!(page_shift(size), Some(shift));
+    }
+    assert_eq!(page_shift(0), None);
+    assert_eq!(page_shift(0x3000), None);
 }

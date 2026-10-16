@@ -33,6 +33,24 @@ mod esp32h2;
 #[cfg(feature = "esp32h2")]
 pub use esp32h2::*;
 
+#[cfg(any(feature = "esp32c5", feature = "esp32c61", feature = "esp32s31"))]
+mod indexed;
+
+#[cfg(feature = "esp32c5")]
+mod esp32c5;
+#[cfg(feature = "esp32c5")]
+pub use esp32c5::*;
+
+#[cfg(feature = "esp32c61")]
+mod esp32c61;
+#[cfg(feature = "esp32c61")]
+pub use esp32c61::*;
+
+#[cfg(feature = "esp32s31")]
+mod esp32s31;
+#[cfg(feature = "esp32s31")]
+pub use esp32s31::*;
+
 #[cfg(not(any(
     feature = "esp32",
     feature = "esp32s2",
@@ -40,7 +58,10 @@ pub use esp32h2::*;
     feature = "esp32c2",
     feature = "esp32c3",
     feature = "esp32c6",
-    feature = "esp32h2"
+    feature = "esp32h2",
+    feature = "esp32c5",
+    feature = "esp32c61",
+    feature = "esp32s31"
 )))]
 mod not_selected;
 
@@ -51,6 +72,9 @@ mod not_selected;
     feature = "esp32c2",
     feature = "esp32c3",
     feature = "esp32c6",
-    feature = "esp32h2"
+    feature = "esp32h2",
+    feature = "esp32c5",
+    feature = "esp32c61",
+    feature = "esp32s31"
 )))]
 pub use not_selected::*;

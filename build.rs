@@ -6,7 +6,8 @@ fn main() {
         out_dir.starts_with(&manifest_dir) || manifest_dir.contains("/target/package/");
     if !is_primary {
         let chip_features = [
-            "esp32", "esp32s2", "esp32s3", "esp32c2", "esp32c3", "esp32c6", "esp32h2",
+            "esp32", "esp32s2", "esp32s3", "esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32c61",
+            "esp32h2", "esp32s31",
         ];
 
         let enabled: Vec<_> = chip_features

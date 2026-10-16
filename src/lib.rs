@@ -277,9 +277,7 @@ where
         while len > 0 {
             let n = len.min(OTA_VERIFY_READ_SIZE as u32);
             let buf = &mut bytes[..n as usize];
-            self.flash
-                .read(offset, buf)
-                .map_err(|_| Error::Flash)?;
+            self.flash.read(offset, buf).map_err(|_| Error::Flash)?;
 
             crc = crc32_le(crc, buf);
             offset += n;
@@ -389,9 +387,7 @@ where
     /// If both entries point at it, the one with the higher seq is the active one.
     fn get_current_slot(&mut self) -> Result<(u8, EspOtaSelectEntry)> {
         let (slot1, slot2) = self.read_boot_entries()?;
-        let current_partition = self
-            .booted_partition()
-            .ok_or(Error::UnknownBootPartition)?;
+        let current_partition = self.booted_partition().ok_or(Error::UnknownBootPartition)?;
 
         let count = self.pinfo.ota_partitions_count;
         let boots_current = |e: &EspOtaSelectEntry| {

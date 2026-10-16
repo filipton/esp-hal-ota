@@ -2,18 +2,20 @@ pub const MMU_PAGE_8KB: u32 = 0x2000;
 pub const MMU_PAGE_16KB: u32 = 0x4000;
 pub const MMU_PAGE_32KB: u32 = 0x8000;
 pub const MMU_PAGE_64KB: u32 = 0x10000;
+pub const MMU_PAGE_128KB: u32 = 0x20000;
+pub const MMU_PAGE_256KB: u32 = 0x40000;
+
+/// log2 of an MMU page size (`None` for an unknown size).
+pub fn page_shift(page_size: u32) -> Option<u32> {
+    match page_size {
+        MMU_PAGE_8KB | MMU_PAGE_16KB | MMU_PAGE_32KB | MMU_PAGE_64KB | MMU_PAGE_128KB
+        | MMU_PAGE_256KB => Some(page_size.trailing_zeros()),
+        _ => None,
+    }
+}
 
 fn mmu_hal_pages_to_bytes(mmu_id: u32, page_num: u32) -> Option<u32> {
-    let shift_code = match crate::mmu_ll::mmu_ll_get_page_size(mmu_id) {
-        MMU_PAGE_64KB => 16,
-        MMU_PAGE_32KB => 15,
-        MMU_PAGE_16KB => 14,
-        MMU_PAGE_8KB => 13,
-        _page_size => {
-            error!("Wrong MMU page size: 0x{:x}", _page_size);
-            return None;
-        }
-    };
+    let shift_code = page_shift(crate::mmu_ll::mmu_ll_get_page_size(mmu_id))?;
 
     Some(page_num << shift_code)
 }
