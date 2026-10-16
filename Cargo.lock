@@ -56,7 +56,7 @@ checksum = "c815b3ed4213d85d6cfd274b871f430c0681084e28dfd4a537877f47f844ec83"
 
 [[package]]
 name = "esp-hal-ota"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "defmt",
  "embedded-storage",

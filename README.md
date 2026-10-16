@@ -1,11 +1,7 @@
 # esp-hal-ota
 OTA for esp-hal (no-std).
 
-Until `esp-bootloader-esp-idf` 0.3, esp-hal had no OTA support and this crate (a port of ESP-IDF's
-C OTA logic) was the only OTA solution for esp-hal. esp-hal now ships basic OTA primitives
-(`OtaUpdater`); this crate still uses its own implementation because upstream currently mishandles
-a few real-world cases (erased otadata after flashing, a corrupt otadata entry), and adds a
-complete streaming updater on top:
+A port of ESP-IDF's OTA logic with a complete streaming updater:
 
 - streaming writes of image chunks
 - CRC32 check against the expected image CRC

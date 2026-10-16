@@ -11,7 +11,6 @@ Breaking API cleanup, see [MIGRATING.md](MIGRATING.md).
 - `Error` (was `OtaError`) with more precise variants, `Display` and `core::error::Error`.
 - `set_boot_partition` and `boot_entries` return `Result` instead of logging/swallowing errors.
 - Internal modules and types are no longer public.
-- README: short note on how this crate relates to `esp-bootloader-esp-idf`'s `OtaUpdater`.
 
 ## 0.6.2
 
