@@ -1,18 +1,17 @@
 #![no_std]
 #![no_main]
-#![feature(type_alias_impl_trait)]
 
 extern crate alloc;
 use core::str::FromStr;
 use embassy_executor::Spawner;
-use embassy_net::{Config, Runner, Stack, StackResources, tcp::TcpSocket};
+use embassy_net::{Config, Runner, StackResources, tcp::TcpSocket};
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal_ota::Ota;
-use esp_radio::{
-    Controller,
-    wifi::{ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStaState},
+use esp_radio::wifi::{
+    AuthenticationMethodConfig, Config as WifiConfig, ControllerConfig, Interface, WifiController,
+    sta::StationConfig,
 };
 use esp_storage::FlashStorage;
 
@@ -24,15 +23,6 @@ const RX_BUFFER_SIZE: usize = 16384;
 const TX_BUFFER_SIZE: usize = 16384;
 static mut TX_BUFF: [u8; TX_BUFFER_SIZE] = [0; TX_BUFFER_SIZE];
 static mut RX_BUFF: [u8; RX_BUFFER_SIZE] = [0; RX_BUFFER_SIZE];
-
-macro_rules! mk_static {
-    ($t:ty,$val:expr) => {{
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        #[deny(unused_attributes)]
-        let x = STATIC_CELL.uninit().write(($val));
-        x
-    }};
-}
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -76,26 +66,27 @@ async fn main(spawner: Spawner) {
 
     let timg0 = TimerGroup::new(peripherals.TIMG0);
 
-    #[cfg(any(feature = "esp32s3", feature = "esp32"))]
-    esp_rtos::start(timg0.timer0);
+    esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
 
-    #[cfg(feature = "esp32c3")]
-    let software_interrupt =
-        esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
-
-    #[cfg(feature = "esp32c3")]
-    esp_rtos::start(timg0.timer0, software_interrupt.software_interrupt0);
-
-    let init = &*mk_static!(Controller<'static>, esp_radio::init().unwrap());
-
-    let wifi = peripherals.WIFI;
-    let (controller, interfaces) = esp_radio::wifi::new(&init, wifi, Default::default()).unwrap();
+    let station_config = WifiConfig::Station(
+        StationConfig::default()
+            .with_ssid(WIFI_SSID.try_into().expect("Wifi ssid parse"))
+            .with_authentication(AuthenticationMethodConfig::Wpa2Personal(
+                WIFI_PSK.try_into().expect("Wifi psk parse"),
+            )),
+    );
+    let wifi_interface = Interface::station();
+    let controller = WifiController::new(
+        peripherals.WIFI,
+        ControllerConfig::default().with_initial_config(station_config),
+    )
+    .unwrap();
 
     let config = Config::dhcpv4(Default::default());
     let seed = 69420;
 
     let (stack, runner) = embassy_net::new(
-        interfaces.sta,
+        wifi_interface,
         config,
         {
             static STATIC_CELL: static_cell::StaticCell<StackResources<3>> =
@@ -105,10 +96,8 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    spawner
-        .spawn(connection(controller, stack))
-        .expect("connection spawn");
-    spawner.spawn(net_task(runner)).expect("net task spawn");
+    spawner.spawn(connection(controller).expect("connection spawn"));
+    spawner.spawn(net_task(runner).expect("net task spawn"));
 
     // mark ota partition valid
     {
@@ -204,38 +193,18 @@ async fn main(spawner: Spawner) {
 }
 
 #[embassy_executor::task]
-async fn connection(mut controller: WifiController<'static>, stack: Stack<'static>) {
+async fn connection(mut controller: WifiController<'static>) {
     log::info!("start connection task");
-    log::info!("Device capabilities: {:?}", controller.capabilities());
     loop {
-        if esp_radio::wifi::sta_state() == WifiStaState::Connected {
-            // wait until we're no longer connected
-            controller.wait_for_event(WifiEvent::StaDisconnected).await;
-            Timer::after(Duration::from_millis(5000)).await
-        }
-        if !matches!(controller.is_started(), Ok(true)) {
-            let client_config = ModeConfig::Client(
-                ClientConfig::default()
-                    .with_ssid(WIFI_SSID.try_into().expect("Wifi ssid parse"))
-                    .with_password(WIFI_PSK.try_into().expect("Wifi psk parse")),
-            );
-            controller.set_config(&client_config).unwrap();
-            log::info!("Starting wifi");
-            controller.start_async().await.unwrap();
-            log::info!("Wifi started!");
-        }
         log::info!("About to connect...");
 
         match controller.connect_async().await {
             Ok(_) => {
                 log::info!("Wifi connected!");
 
-                loop {
-                    if stack.is_link_up() {
-                        break;
-                    }
-                    Timer::after(Duration::from_millis(500)).await;
-                }
+                // wait until we're no longer connected
+                _ = controller.wait_for_disconnect_async().await;
+                Timer::after(Duration::from_millis(5000)).await
             }
             Err(e) => {
                 log::info!("Failed to connect to wifi: {e:?}");
@@ -246,7 +215,7 @@ async fn connection(mut controller: WifiController<'static>, stack: Stack<'stati
 }
 
 #[embassy_executor::task]
-async fn net_task(mut runner: Runner<'static, WifiDevice<'static>>) {
+async fn net_task(mut runner: Runner<'static, Interface>) {
     runner.run().await
 }
 

@@ -52,13 +52,9 @@ pub fn mmu_ll_entry_id_to_paddr_base(mmu_id: u32, entry_id: u32) -> u32 {
     let spi_mem = unsafe { &*esp32h2::SPI0::ptr() };
     spi_mem
         .mmu_item_index()
-        .write(|w| unsafe { w.spi_mmu_item_index().bits(entry_id) });
+        .write(|w| unsafe { w.mmu_item_index().bits(entry_id) });
 
-    let mmu_item_content = spi_mem
-        .mmu_item_content()
-        .read()
-        .spi_mmu_item_content()
-        .bits();
+    let mmu_item_content = spi_mem.mmu_item_content().read().bits();
 
     (mmu_item_content & SOC_MMU_VALID_VAL_MASK) << shift_code
 }
@@ -67,13 +63,9 @@ pub fn mmu_ll_check_entry_valid(_mmu_id: u32, entry_id: u32) -> bool {
     let spi_mem = unsafe { &*esp32h2::SPI0::ptr() };
     spi_mem
         .mmu_item_index()
-        .write(|w| unsafe { w.spi_mmu_item_index().bits(entry_id) });
+        .write(|w| unsafe { w.mmu_item_index().bits(entry_id) });
 
-    let mmu_item_content = spi_mem
-        .mmu_item_content()
-        .read()
-        .spi_mmu_item_content()
-        .bits();
+    let mmu_item_content = spi_mem.mmu_item_content().read().bits();
 
     (mmu_item_content & SOC_MMU_VALID) != 0
 }

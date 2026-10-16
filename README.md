@@ -15,6 +15,7 @@ But esp32s3, esp32c3 and esp32 are working perfectly fine.
 - CRC32 verification
 
 ## Getting started
+- Enable the `embedded-storage` feature of `esp-storage` (opt-in since `esp-storage` 0.10)
 - Create `partitions.csv` file in project root (copy `partitions.csv.template` file)
 - In your project edit `./.cargo/config.toml` file and append `--partition-table ./partitions.csv` to the `runner` attribute
 - Optionally append `--erase-parts otadata` to `./cargo/config.toml` to fix some ota issues
@@ -31,7 +32,7 @@ To see real-world example look at `./examples` and `./simple-ota-server` dirs.
 let flash_size = 1234; // get it from OTA server
 let target_crc = 65436743; // get it from OTA server
 
-let mut ota = Ota::new(FlashStorage::new()).unwrap();
+let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH)).unwrap();
 ota.ota_begin(flash_size, target_crc);
 
 let mut buf = [0; 4096];

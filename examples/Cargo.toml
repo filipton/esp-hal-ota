@@ -6,20 +6,20 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-esp-backtrace = { version = "0.18.0", features = [ "panic-handler", "println" ] }
-esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
-esp-println = { version = "0.16.0", features = ["log-04"] }
-log = { version = "0.4.29" }
-esp-radio = { version = "0.16.0", features = [ "unstable", "wifi", "ble" ] }
-esp-rtos = { version = "0.1.0", features = ["esp-radio", "embassy"] }
-embassy-executor = { version = "0.9.1", package = "embassy-executor", features = ["arch-riscv32"] }
-embassy-net = { version = "0.7.1", features = ["tcp", "udp", "dhcpv4", "medium-ethernet"] }
-embassy-time = { version = "0.5.0" }
-esp-storage = { version = "0.8.0", features = [] }
+esp-backtrace = { version = "0.20.0", features = [ "panic-handler", "println" ] }
+esp-hal = { version = "1.2.2", features = ["unstable"] }
+esp-println = { version = "0.18.0", features = ["log-04"] }
+log = { version = "0.4.34" }
+esp-radio = { version = "1.0.0-beta.1", features = [ "unstable", "wifi", "ble" ] }
+esp-rtos = { version = "0.4.0", features = ["esp-radio", "embassy"] }
+embassy-executor = { version = "0.10.0" }
+embassy-net = { version = "0.9.1", features = ["tcp", "udp", "dhcpv4", "medium-ethernet"] }
+embassy-time = { version = "0.5.1" }
+esp-storage = { version = "0.10.0", features = ["embedded-storage"] }
 esp-hal-ota = { path = "../", features = ["log"] }
 static_cell = { version = "2.1.1", features = ["nightly"] }
-esp-alloc = "0.9.0"
-esp-bootloader-esp-idf = { version = "0.3.0", features = ["log-04"] }
+esp-alloc = "0.11.0"
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["log-04"] }
 
 [build-dependencies]
 dotenvy = "0.15.7"

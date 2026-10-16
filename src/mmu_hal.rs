@@ -23,7 +23,8 @@ pub fn esp_get_current_running_partition(partitions: &[(u32, u32)]) -> Option<us
     // https://github.com/espressif/esp-idf/blob/b5ac4fbdf9e9fb320bb0a98ee4fbaa18f8566f37/components/esp_mm/esp_mmu_map.c#L754
     let mmu_id = 0;
 
-    let ptr = esp_get_current_running_partition as *const () as *const u32;
+    // black_box: xtensa LLVM (esp toolchain 1.96) crashes folding this address at opt-level s/z
+    let ptr = core::hint::black_box(esp_get_current_running_partition as *const ()) as *const u32;
     let entry_id = crate::mmu_ll::mmu_ll_get_entry_id(mmu_id, ptr as u32);
 
     if !crate::mmu_ll::mmu_ll_check_entry_valid(mmu_id, entry_id) {
