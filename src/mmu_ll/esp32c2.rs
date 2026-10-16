@@ -9,6 +9,7 @@ fn soc_mmu_vaddr_mask(mmu_id: u32) -> u32 {
 }
 
 pub fn mmu_ll_get_page_size(_mmu_id: u32) -> u32 {
+    // SAFETY: read-only access to a PAC register block that is always valid.
     let extmem = unsafe { &*esp32c2::EXTMEM::ptr() };
     let cache_mmu_page_size = extmem.cache_conf_misc().read().cache_mmu_page_size().bits();
     match cache_mmu_page_size {
@@ -45,11 +46,16 @@ pub fn mmu_ll_entry_id_to_paddr_base(mmu_id: u32, entry_id: u32) -> u32 {
         }
     };
 
-    let ptr = (DR_REG_MMU_TABLE + entry_id * 4) as *const u32;
-    unsafe { ((*ptr) & SOC_MMU_VALID_VAL_MASK) << shift_code }
+    (mmu_entry(entry_id) & SOC_MMU_VALID_VAL_MASK) << shift_code
 }
 
 pub fn mmu_ll_check_entry_valid(_mmu_id: u32, entry_id: u32) -> bool {
-    let ptr = (DR_REG_MMU_TABLE + entry_id * 4) as *const u32;
-    unsafe { ((*ptr) & SOC_MMU_INVALID) == 0 }
+    (mmu_entry(entry_id) & SOC_MMU_INVALID) == 0
+}
+
+/// Reads MMU table entry `entry_id`.
+fn mmu_entry(entry_id: u32) -> u32 {
+    // SAFETY: `DR_REG_MMU_TABLE` is the always-mapped MMU table and `entry_id` comes from a
+    // masked virtual address, so it stays inside the table. Volatile, as it is hardware state.
+    unsafe { ((DR_REG_MMU_TABLE + entry_id * 4) as *const u32).read_volatile() }
 }

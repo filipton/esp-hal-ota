@@ -13,6 +13,7 @@ But esp32s3, esp32c3 and esp32 are working perfectly fine.
 - Dynamic partitions reading (so no macros, no reading from partitions.csv) - fully automatic
 - Checking currently booted partition (using some pointer magic from ESP-IDF)
 - CRC32 verification
+- No allocations, no panics (errors are returned)
 
 ## Getting started
 - Enable the `embedded-storage` feature of `esp-storage` (opt-in since `esp-storage` 0.10)
@@ -28,12 +29,12 @@ runner = "espflash flash --monitor --partition-table ./partitions.csv --erase-pa
 ## Example
 To see real-world example look at `./examples` and `./simple-ota-server` dirs.
 
-```rust
+```rust,ignore
 let flash_size = 1234; // get it from OTA server
-let target_crc = 65436743; // get it from OTA server
+let target_crc = 65436743; // get it from OTA server (crc32, e.g. `crc32fast::hash`)
 
-let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH)).unwrap();
-ota.ota_begin(flash_size, target_crc);
+let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH))?;
+ota.ota_begin(flash_size, target_crc)?;
 
 let mut buf = [0; 4096];
 loop {
@@ -42,17 +43,19 @@ loop {
         break;
     }
 
-    let res = ota.ota_write_chunk(&buf[..n]);
-    if res == Ok(true) { // end of flash
-        if ota.ota_flush(true, true).is_ok() { // true if you want to verify crc reading flash, and true if you want rollbacks
-            esp_hal::reset::software_reset();
-        }
+    if ota.ota_write_chunk(&buf[..n])? {
+        // whole image written: verify crc by reading flash back, and enable rollbacks
+        ota.ota_flush(true, true)?;
+        esp_hal::system::software_reset();
     }
 
-    let progress = (ota.get_ota_progress() * 100) as u8;
+    let progress = (ota.get_ota_progress() * 100.0) as u8;
     log::info!("progress: {}%", progress);
 }
 ```
+
+After booting the new image call `ota.ota_mark_app_valid()`, otherwise (with rollbacks enabled)
+the bootloader goes back to the previous image on the next reset.
 
 ### Running example
 - You can compile your .bin file using esp-flash 

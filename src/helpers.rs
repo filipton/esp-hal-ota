@@ -1,33 +1,28 @@
-#[inline(always)]
-/// Helper funcion!
-/// Change seq to partition number
-pub const fn seq_to_part(seq: u32, partitions_count: usize) -> usize {
-    ((seq as usize).saturating_sub(1)) % partitions_count
-}
-
-#[inline(always)]
-/// Helper funcion!
-/// If crc of seq is correct it returns seq, otherwise default value is returned
-pub fn seq_or_default(seq: &[u8], crc: u32, default: u32) -> u32 {
-    let crc_calc = crate::crc32_le(0xFFFFFFFF, seq);
-    if crc == crc_calc {
-        return u32::from_le_bytes(seq.try_into().expect("Wrong size?"));
-    }
-
-    default
-}
-
-#[inline(always)]
 /// Helper function!
-/// Check if crc is correct for given seq
+/// Change seq to partition number (returns 0 if `partitions_count` is 0)
+#[inline(always)]
+pub const fn seq_to_part(seq: u32, partitions_count: usize) -> usize {
+    match ((seq as usize).saturating_sub(1)).checked_rem(partitions_count) {
+        Some(part) => part,
+        None => 0,
+    }
+}
+
+/// Helper function!
+/// If `seq` is 4 bytes and its crc is correct it returns seq, otherwise default value is returned
+#[inline(always)]
+pub fn seq_or_default(seq: &[u8], crc: u32, default: u32) -> u32 {
+    match <[u8; 4]>::try_from(seq) {
+        Ok(bytes) if is_crc_seq_correct(u32::from_le_bytes(bytes), crc) => {
+            u32::from_le_bytes(bytes)
+        }
+        _ => default,
+    }
+}
+
+/// Helper function!
+/// Check if crc is correct for given seq (erased `0xFFFFFFFF` seq is never valid, like in ESP-IDF)
+#[inline(always)]
 pub fn is_crc_seq_correct(seq: u32, crc: u32) -> bool {
-    let bytes = unsafe {
-        let mut buf = [0; 4]; //u32
-        core::ptr::copy_nonoverlapping(&seq as *const u32 as *const u8, buf.as_mut_ptr(), 4);
-
-        buf
-    };
-
-    let crc_calc = crate::crc32_le(0xFFFFFFFF, &bytes);
-    crc == crc_calc
+    seq != u32::MAX && crc == crate::crc32_le(u32::MAX, &seq.to_le_bytes())
 }

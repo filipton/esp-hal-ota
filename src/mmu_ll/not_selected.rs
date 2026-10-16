@@ -1,3 +1,5 @@
+//! Stubs used when no chip feature is enabled (docs, `cargo check`, host tests).
+
 pub fn mmu_ll_get_page_size(_mmu_id: u32) -> u32 {
     0
 }

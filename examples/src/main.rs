@@ -14,15 +14,16 @@ use esp_radio::wifi::{
     sta::StationConfig,
 };
 use esp_storage::FlashStorage;
+use static_cell::StaticCell;
 
-const WIFI_SSID: &'static str = env!("SSID");
-const WIFI_PSK: &'static str = env!("PSK");
-const OTA_SERVER_IP: &'static str = env!("OTA_IP");
+const WIFI_SSID: &str = env!("SSID");
+const WIFI_PSK: &str = env!("PSK");
+const OTA_SERVER_IP: &str = env!("OTA_IP");
 
 const RX_BUFFER_SIZE: usize = 16384;
 const TX_BUFFER_SIZE: usize = 16384;
-static mut TX_BUFF: [u8; TX_BUFFER_SIZE] = [0; TX_BUFFER_SIZE];
-static mut RX_BUFF: [u8; RX_BUFFER_SIZE] = [0; RX_BUFFER_SIZE];
+static RX_BUFF: StaticCell<[u8; RX_BUFFER_SIZE]> = StaticCell::new();
+static TX_BUFF: StaticCell<[u8; TX_BUFFER_SIZE]> = StaticCell::new();
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -35,34 +36,14 @@ async fn main(spawner: Spawner) {
 
     #[cfg(feature = "esp32")]
     {
-        static mut HEAP: core::mem::MaybeUninit<[u8; 30 * 1024]> = core::mem::MaybeUninit::uninit();
-
-        #[unsafe(link_section = ".dram2_uninit")]
-        static mut HEAP2: core::mem::MaybeUninit<[u8; 64 * 1024]> =
-            core::mem::MaybeUninit::uninit();
-
-        unsafe {
-            #[allow(static_mut_refs)]
-            esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
-                HEAP.as_mut_ptr() as *mut u8,
-                core::mem::size_of_val(&*core::ptr::addr_of!(HEAP)),
-                esp_alloc::MemoryCapability::Internal.into(),
-            ));
-
-            #[allow(static_mut_refs)]
-            esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
-                HEAP2.as_mut_ptr() as *mut u8,
-                core::mem::size_of_val(&*core::ptr::addr_of!(HEAP2)),
-                esp_alloc::MemoryCapability::Internal.into(),
-            ));
-        }
+        // esp32 has little contiguous DRAM: use the RAM reclaimed from the bootloader too
+        esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 96 * 1024);
+        esp_alloc::heap_allocator!(size: 24 * 1024);
     }
 
-    let peripherals = esp_hal::init(esp_hal::Config::default());
-    //let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+    let mut peripherals = esp_hal::init(esp_hal::Config::default());
 
     esp_println::logger::init_logger_from_env();
-    //log::set_max_level(log::LevelFilter::Info); // only for esp32s3??
 
     let timg0 = TimerGroup::new(peripherals.TIMG0);
 
@@ -89,9 +70,8 @@ async fn main(spawner: Spawner) {
         wifi_interface,
         config,
         {
-            static STATIC_CELL: static_cell::StaticCell<StackResources<3>> =
-                static_cell::StaticCell::new();
-            STATIC_CELL.uninit().write(StackResources::<3>::new())
+            static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new();
+            RESOURCES.init(StackResources::new())
         },
         seed,
     );
@@ -101,10 +81,8 @@ async fn main(spawner: Spawner) {
 
     // mark ota partition valid
     {
-        let mut ota = Ota::new(FlashStorage::new(unsafe {
-            peripherals.FLASH.clone_unchecked()
-        }))
-        .expect("Cannot create ota");
+        let mut ota =
+            Ota::new(FlashStorage::new(peripherals.FLASH.reborrow())).expect("Cannot create ota");
         _ = ota.ota_mark_app_valid(); //do not unwrap here if using factory/test partition
     }
 
@@ -118,13 +96,11 @@ async fn main(spawner: Spawner) {
         }
     }
 
-    let mut socket = unsafe {
-        TcpSocket::new(
-            stack,
-            &mut *core::ptr::addr_of_mut!(RX_BUFF),
-            &mut *core::ptr::addr_of_mut!(TX_BUFF),
-        )
-    };
+    let mut socket = TcpSocket::new(
+        stack,
+        RX_BUFF.init([0; RX_BUFFER_SIZE]),
+        TX_BUFF.init([0; TX_BUFFER_SIZE]),
+    );
 
     let ip = embassy_net::IpEndpoint::from_str(OTA_SERVER_IP).expect("Wrong ip addr");
     socket.connect(ip).await.expect("Cannot connect!");
@@ -144,17 +120,14 @@ async fn main(spawner: Spawner) {
     log::info!("flash_size: {flash_size}");
     log::info!("target_crc: {target_crc}");
 
-    let mut ota = Ota::new(FlashStorage::new(unsafe {
-        peripherals.FLASH.clone_unchecked()
-    }))
-    .expect("Cannot create ota");
+    let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH)).expect("Cannot create ota");
     ota.ota_begin(flash_size, target_crc).unwrap();
 
     let mut bytes_read: usize = 0;
     loop {
         let bytes_to_read = 8192.min(flash_size - bytes_read as u32);
         let res = read_exact(&mut socket, &mut ota_buff[..bytes_to_read as usize]).await;
-        if let Ok(_) = res {
+        if res.is_ok() {
             bytes_read += bytes_to_read as usize;
             if bytes_to_read == 0 {
                 break;

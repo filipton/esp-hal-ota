@@ -9,6 +9,7 @@ fn soc_mmu_vaddr_mask(mmu_id: u32) -> u32 {
 }
 
 pub fn mmu_ll_get_page_size(_mmu_id: u32) -> u32 {
+    // SAFETY: read-only access to a PAC register block that is always valid.
     let spi_mem = unsafe { &*esp32h2::SPI0::ptr() };
     let page_size_code = spi_mem.mmu_power_ctrl().read().spi_mmu_page_size().bits();
 
@@ -49,23 +50,22 @@ pub fn mmu_ll_entry_id_to_paddr_base(mmu_id: u32, entry_id: u32) -> u32 {
         }
     };
 
-    let spi_mem = unsafe { &*esp32h2::SPI0::ptr() };
-    spi_mem
-        .mmu_item_index()
-        .write(|w| unsafe { w.mmu_item_index().bits(entry_id) });
-
-    let mmu_item_content = spi_mem.mmu_item_content().read().bits();
-
-    (mmu_item_content & SOC_MMU_VALID_VAL_MASK) << shift_code
+    (mmu_entry(entry_id) & SOC_MMU_VALID_VAL_MASK) << shift_code
 }
 
 pub fn mmu_ll_check_entry_valid(_mmu_id: u32, entry_id: u32) -> bool {
+    (mmu_entry(entry_id) & SOC_MMU_VALID) != 0
+}
+
+/// Reads MMU table entry `entry_id` through the index/content register pair.
+fn mmu_entry(entry_id: u32) -> u32 {
+    // SAFETY: PAC register block that is always valid; any `entry_id` is accepted by the index
+    // register. Index write and content read are not atomic, but nothing else touches the MMU
+    // table index at runtime (same as ESP-IDF's `mmu_ll` without locking).
     let spi_mem = unsafe { &*esp32h2::SPI0::ptr() };
+    // SAFETY: the index register accepts any value.
     spi_mem
         .mmu_item_index()
         .write(|w| unsafe { w.mmu_item_index().bits(entry_id) });
-
-    let mmu_item_content = spi_mem.mmu_item_content().read().bits();
-
-    (mmu_item_content & SOC_MMU_VALID) != 0
+    spi_mem.mmu_item_content().read().bits()
 }

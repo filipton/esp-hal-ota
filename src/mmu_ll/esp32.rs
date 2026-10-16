@@ -45,9 +45,7 @@ pub fn mmu_ll_get_entry_id(_mmu_id: u32, vaddr: u32) -> u32 {
 }
 
 pub fn mmu_ll_entry_id_to_paddr_base(_mmu_id: u32, entry_id: u32) -> u32 {
-    let level = unsafe { dport_interrupt_disable() };
-    let mmu_val = unsafe { *(DPORT_PRO_FLASH_MMU_TABLE as *const u32).offset(entry_id as isize) };
-    unsafe { dport_interrupt_restore(level) };
+    let mmu_val = mmu_entry(entry_id);
 
     if entry_id >= MMU_LL_PSRAM_ENTRY_START_ID {
         mmu_val << 15
@@ -57,40 +55,60 @@ pub fn mmu_ll_entry_id_to_paddr_base(_mmu_id: u32, entry_id: u32) -> u32 {
 }
 
 pub fn mmu_ll_check_entry_valid(_mmu_id: u32, entry_id: u32) -> bool {
-    let level = unsafe { dport_interrupt_disable() };
-    let mmu_val = unsafe { *(DPORT_PRO_FLASH_MMU_TABLE as *const u32).offset(entry_id as isize) };
-    unsafe { dport_interrupt_restore(level) };
+    let mmu_val = mmu_entry(entry_id);
 
     (mmu_val & SOC_MMU_INVALID) == 0
 }
 
-// NOTE:Idk if required!
-// Only used when using second core etc.
+/// Reads MMU table entry `entry_id`.
+fn mmu_entry(entry_id: u32) -> u32 {
+    // SAFETY: DPORT reads need high-priority interrupts masked (ESP32 DPORT erratum, same as
+    // ESP-IDF's `DPORT_INTERRUPT_DISABLE`). The table is always mapped and `entry_id` comes from
+    // a masked virtual address, so it stays inside it. The old level is restored right after.
+    unsafe {
+        let level = dport_interrupt_disable();
+        let mmu_val = (DPORT_PRO_FLASH_MMU_TABLE as *const u32)
+            .add(entry_id as usize)
+            .read_volatile();
+        dport_interrupt_restore(level);
+        mmu_val
+    }
+}
 
 const SOC_DPORT_WORKAROUND_DIS_INTERRUPT_LVL: u32 = 5;
+
+/// Raises the interrupt level, returns the old `PS` value.
+///
+/// # Safety
+/// Must be paired with [`dport_interrupt_restore`] with the returned value.
 #[inline(always)]
 unsafe fn dport_interrupt_disable() -> u32 {
     let level: u32;
 
+    // no `nomem`: the asm must act as a compiler barrier around the DPORT read
     unsafe {
         core::arch::asm!(
             "rsil {0}, {1}",
             out(reg) level,
             const SOC_DPORT_WORKAROUND_DIS_INTERRUPT_LVL,
-            options(nomem, nostack)
+            options(nostack)
         );
     }
 
     level
 }
 
+/// Restores `PS` saved by [`dport_interrupt_disable`].
+///
+/// # Safety
+/// `level` must come from [`dport_interrupt_disable`].
 #[inline(always)]
 unsafe fn dport_interrupt_restore(level: u32) {
     unsafe {
         core::arch::asm!(
             "wsr.ps {0}; rsync",
             in(reg) level,
-            options(nomem, nostack)
+            options(nostack)
         );
     }
 }
