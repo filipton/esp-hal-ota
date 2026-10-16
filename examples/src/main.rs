@@ -83,7 +83,7 @@ async fn main(spawner: Spawner) {
     {
         let mut ota =
             Ota::new(FlashStorage::new(peripherals.FLASH.reborrow())).expect("Cannot create ota");
-        _ = ota.ota_mark_app_valid(); //do not unwrap here if using factory/test partition
+        _ = ota.mark_app_valid(); //do not unwrap here if using factory/test partition
     }
 
     loop {
@@ -121,7 +121,7 @@ async fn main(spawner: Spawner) {
     log::info!("target_crc: {target_crc}");
 
     let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH)).expect("Cannot create ota");
-    ota.ota_begin(flash_size, target_crc).unwrap();
+    ota.begin(flash_size, target_crc).unwrap();
 
     let mut bytes_read: usize = 0;
     loop {
@@ -133,14 +133,14 @@ async fn main(spawner: Spawner) {
                 break;
             }
 
-            let res = ota.ota_write_chunk(&ota_buff[..bytes_to_read as usize]);
+            let res = ota.write(&ota_buff[..bytes_to_read as usize]);
             _ = socket.write(&[0]).await;
 
             match res {
                 Ok(true) => {
-                    let res = ota.ota_flush(false, true);
+                    let res = ota.finish(true);
                     if let Err(e) = res {
-                        log::error!("Ota flush error: {e:?}");
+                        log::error!("Ota finish error: {e:?}");
                         break;
                     }
 
@@ -156,7 +156,9 @@ async fn main(spawner: Spawner) {
             }
         }
 
-        log::info!("Progress: {}%", (ota.get_ota_progress() * 100.0) as u8);
+        if let Some(progress) = ota.progress() {
+            log::info!("Progress: {}%", progress.percent());
+        }
     }
 
     loop {

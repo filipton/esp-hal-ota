@@ -1,6 +1,19 @@
 # esp-hal-ota
 OTA for esp-hal (no-std).
 
+Until `esp-bootloader-esp-idf` 0.3, esp-hal had no OTA support and this crate (a port of ESP-IDF's
+C OTA logic) was the only OTA solution for esp-hal. esp-hal now ships basic OTA primitives
+(`OtaUpdater`); this crate still uses its own implementation because upstream currently mishandles
+a few real-world cases (erased otadata after flashing, a corrupt otadata entry), and adds a
+complete streaming updater on top:
+
+- streaming writes of image chunks
+- CRC32 check against the expected image CRC
+- read-back verify before activation
+- progress and resume of interrupted updates
+- rollback / mark valid on the booted partition
+- tolerant of an erased or corrupt otadata entry
+
 [![crates.io](https://img.shields.io/crates/v/esp-hal-ota.svg)](https://crates.io/crates/esp-hal-ota)
 [![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
@@ -26,6 +39,9 @@ But esp32s3, esp32c3 and esp32 are working perfectly fine.
 runner = "espflash flash --monitor --partition-table ./partitions.csv --erase-parts otadata"
 ```
 
+## Upgrading
+See [MIGRATING.md](MIGRATING.md) for breaking changes between versions.
+
 ## Example
 To see real-world example look at `./examples` and `./simple-ota-server` dirs.
 
@@ -34,7 +50,7 @@ let flash_size = 1234; // get it from OTA server
 let target_crc = 65436743; // get it from OTA server (crc32, e.g. `crc32fast::hash`)
 
 let mut ota = Ota::new(FlashStorage::new(peripherals.FLASH))?;
-ota.ota_begin(flash_size, target_crc)?;
+ota.begin(flash_size, target_crc)?;
 
 let mut buf = [0; 4096];
 loop {
@@ -43,18 +59,19 @@ loop {
         break;
     }
 
-    if ota.ota_write_chunk(&buf[..n])? {
-        // whole image written: verify crc by reading flash back, and enable rollbacks
-        ota.ota_flush(true, true)?;
+    if ota.write(&buf[..n])? {
+        // whole image written: checks crc (also read back from flash), enables rollback
+        ota.finish(true)?;
         esp_hal::system::software_reset();
     }
 
-    let progress = (ota.get_ota_progress() * 100.0) as u8;
-    log::info!("progress: {}%", progress);
+    if let Some(progress) = ota.progress() {
+        log::info!("progress: {}%", progress.percent());
+    }
 }
 ```
 
-After booting the new image call `ota.ota_mark_app_valid()`, otherwise (with rollbacks enabled)
+After booting the new image call `ota.mark_app_valid()`, otherwise (with rollbacks enabled)
 the bootloader goes back to the previous image on the next reset.
 
 ### Running example

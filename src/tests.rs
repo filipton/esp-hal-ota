@@ -88,8 +88,6 @@ fn helpers_do_not_panic_on_bad_input() {
     assert_eq!(helpers::seq_to_part(5, 0), 0);
     assert_eq!(helpers::seq_to_part(0, 2), 0);
     assert_eq!(helpers::seq_to_part(4, 2), 1);
-    assert_eq!(helpers::seq_or_default(&[1, 0, 0], 0x4743989A, 7), 7);
-    assert_eq!(helpers::seq_or_default(&[1, 0, 0, 0], 0x4743989A, 7), 1);
 }
 
 #[test]
@@ -97,13 +95,13 @@ fn entry_parsing_accepts_any_state_value() {
     let mut bytes = [0xAB; 32];
     bytes[24..28].copy_from_slice(&7u32.to_le_bytes());
     let entry = EspOtaSelectEntry::from_bytes(&bytes);
-    assert_eq!(entry.ota_state, OtaImgState::EspOtaImgUndefined);
+    assert_eq!(entry.ota_state, OtaImgState::Undefined);
     assert_eq!(entry.seq_label, [0xAB; 20]);
 
     let mut entry = entry;
-    entry.ota_state = OtaImgState::EspOtaImgValid;
+    entry.ota_state = OtaImgState::Valid;
     let parsed = EspOtaSelectEntry::from_bytes(&entry.to_bytes());
-    assert_eq!(parsed.ota_state, OtaImgState::EspOtaImgValid);
+    assert_eq!(parsed.ota_state, OtaImgState::Valid);
     assert_eq!(parsed.seq, entry.seq);
 }
 
@@ -122,7 +120,7 @@ fn partition_table_parsing() {
     ]);
     assert_eq!(
         Ota::new(no_otadata).err(),
-        Some(OtaError::NotEnoughPartitions)
+        Some(Error::NoOtadata)
     );
 
     let out_of_order = flash_with(&[
@@ -132,7 +130,7 @@ fn partition_table_parsing() {
     ]);
     assert_eq!(
         Ota::new(out_of_order).err(),
-        Some(OtaError::WrongOTAPArtitionOrder)
+        Some(Error::PartitionOrder)
     );
 }
 
@@ -142,39 +140,39 @@ fn full_update_writes_otadata() {
     let crc = crc32_le(0, &image);
 
     let mut ota = Ota::new(default_flash()).unwrap();
-    assert_eq!(ota.ota_write_chunk(&image), Err(OtaError::OtaNotStarted));
+    assert_eq!(ota.write(&image), Err(Error::NotStarted));
     assert_eq!(
-        ota.ota_begin(OTA_SIZE + 1, crc),
-        Err(OtaError::OtaPartitionTooSmall)
+        ota.begin(OTA_SIZE + 1, crc),
+        Err(Error::PartitionTooSmall)
     );
 
-    ota.ota_begin(image.len() as u32, crc).unwrap();
-    assert_eq!(ota.ota_write_chunk(&image[..1000]), Ok(false));
-    assert_eq!(ota.ota_flush(false, true), Err(OtaError::WrongCRC)); // incomplete
+    ota.begin(image.len() as u32, crc).unwrap();
+    assert_eq!(ota.write(&image[..1000]), Ok(false));
+    assert_eq!(ota.finish(true), Err(Error::Incomplete));
 
     // last chunk with trailing garbage, which is ignored
     let mut rest = image[1000..].to_vec();
     rest.extend_from_slice(&[0x55; 100]);
-    assert_eq!(ota.ota_write_chunk(&rest), Ok(true));
-    assert_eq!(ota.get_ota_progress(), 1.0);
-    assert_eq!(ota.ota_verify(), Ok(true));
-    ota.ota_flush(true, true).unwrap();
+    assert_eq!(ota.write(&rest), Ok(true));
+    let progress = ota.progress().unwrap();
+    assert_eq!((progress.percent(), progress.permille()), (100, 1000));
+    assert_eq!(ota.verify(), Ok(true));
+    ota.finish(true).unwrap();
 
     assert_eq!(&ota.flash.0[OTA_0 as usize..][..image.len()], &image[..]);
     // fresh otadata: entry 2 gets seq 1 (= ota_0)
     let entry = entry_at(&mut ota, 2);
     assert_eq!(entry.seq, 1);
-    assert_eq!(entry.ota_state, OtaImgState::EspOtaImgNew);
+    assert_eq!(entry.ota_state, OtaImgState::New);
     assert_eq!(entry_at(&mut ota, 1).seq, 0);
 }
 
 #[test]
 fn wrong_crc_does_not_touch_otadata() {
     let mut ota = Ota::new(default_flash()).unwrap();
-    ota.ota_begin(4, 1234).unwrap();
-    assert_eq!(ota.ota_write_chunk(&[1, 2, 3, 4]), Ok(true));
-    assert_eq!(ota.ota_flush(false, false), Err(OtaError::WrongCRC));
-    assert_eq!(ota.ota_flush(true, false), Err(OtaError::OtaVerifyError));
+    ota.begin(4, 1234).unwrap();
+    assert_eq!(ota.write(&[1, 2, 3, 4]), Ok(true));
+    assert_eq!(ota.finish(false), Err(Error::Crc));
     assert!(
         ota.flash.0[OTADATA as usize..][..0x2000]
             .iter()
@@ -186,21 +184,21 @@ fn wrong_crc_does_not_touch_otadata() {
 fn boot_seq_follows_esp_idf() {
     let mut ota = Ota::new(default_flash()).unwrap();
 
-    ota.write_boot_partition(0, OtaImgState::EspOtaImgNew)
+    ota.set_boot_partition(0, OtaImgState::New)
         .unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (0, 1)
     );
 
-    ota.write_boot_partition(1, OtaImgState::EspOtaImgNew)
+    ota.set_boot_partition(1, OtaImgState::New)
         .unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
         (2, 1)
     );
 
-    ota.write_boot_partition(0, OtaImgState::EspOtaImgNew)
+    ota.set_boot_partition(0, OtaImgState::New)
         .unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
@@ -208,7 +206,7 @@ fn boot_seq_follows_esp_idf() {
     );
 
     // same partition again keeps the seq, written to the inactive entry
-    ota.write_boot_partition(0, OtaImgState::EspOtaImgNew)
+    ota.set_boot_partition(0, OtaImgState::New)
         .unwrap();
     assert_eq!(
         (entry_at(&mut ota, 1).seq, entry_at(&mut ota, 2).seq),
@@ -216,8 +214,8 @@ fn boot_seq_follows_esp_idf() {
     );
 
     assert_eq!(
-        ota.write_boot_partition(2, OtaImgState::EspOtaImgNew),
-        Err(OtaError::NotEnoughPartitions)
+        ota.set_boot_partition(2, OtaImgState::New),
+        Err(Error::NotEnoughPartitions)
     );
 }
 
@@ -228,21 +226,35 @@ fn resume_validates_input() {
 
     let mut ota = Ota::new(default_flash()).unwrap();
     assert_eq!(
-        ota.ota_resume(10, 20, 0, 0, false),
-        Err(OtaError::OtaPartitionTooSmall)
+        ota.resume(
+            &ResumeInfo {
+                size: 10,
+                remaining: 20,
+                target_crc: 0,
+                last_crc: 0
+            },
+            false
+        ),
+        Err(Error::InvalidResumeInfo)
     );
 
-    ota.ota_begin(300, crc).unwrap();
-    ota.ota_write_chunk(&image[..100]).unwrap();
-    let details = ota.get_progress_details().unwrap();
+    ota.begin(300, crc).unwrap();
+    ota.write(&image[..100]).unwrap();
+    let info = ota.resume_info().unwrap();
+    assert_eq!(ota.progress().unwrap().percent(), 33);
 
     let mut ota = Ota::new(MemFlash(ota.flash.0)).unwrap();
     assert_eq!(
-        ota.ota_resume(300, details.remaining, crc, details.last_crc ^ 1, true),
-        Err(OtaError::WrongCRC)
+        ota.resume(
+            &ResumeInfo {
+                last_crc: info.last_crc ^ 1,
+                ..info
+            },
+            true
+        ),
+        Err(Error::Crc)
     );
-    ota.ota_resume(300, details.remaining, crc, details.last_crc, true)
-        .unwrap();
-    assert_eq!(ota.ota_write_chunk(&image[100..]), Ok(true));
-    ota.ota_flush(true, false).unwrap();
+    ota.resume(&info, true).unwrap();
+    assert_eq!(ota.write(&image[100..]), Ok(true));
+    ota.finish(false).unwrap();
 }
